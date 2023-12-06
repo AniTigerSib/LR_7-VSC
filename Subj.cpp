@@ -11,8 +11,9 @@ void SubjList::menu() {
     int k = 0;
     int i = 0;
     int intInput = 0;
-    SubjList* subjList = new SubjList();
-    Part* tempPart = nullptr;
+    SubjList* pSubjList = new SubjList();
+    SubjList& rSubjList = *pSubjList;
+    Item* tempItem = nullptr;
     Detail* tDetail = nullptr;
     Furniture* tFurniture = nullptr;
     std::string productCode = "";
@@ -31,10 +32,8 @@ void SubjList::menu() {
             case 1:
                 tDetail = new Detail();
                 try {
-                    if (tDetail->Part::setData(*subjList)) {
-                        //*subjList += (tDetail->toItem()); // TODO: Рассмотреть
-                        subjList->appendToList(tDetail->toItem());
-                    }
+                    if (tDetail->Part::setData(*pSubjList))
+                        rSubjList += (tDetail->toItem());
                     else {
                         delete tDetail;
                         tDetail = nullptr;
@@ -48,10 +47,8 @@ void SubjList::menu() {
             case 2:
                 tFurniture = new Furniture();
                 try {
-                    if (tFurniture->Part::setData(*subjList)) {
-                        //*subjList += (tFurniture->toItem());
-                        subjList->appendToList(tFurniture->toItem());
-                    }
+                    if (tFurniture->Part::setData(*pSubjList))
+                        rSubjList += (tFurniture->toItem());
                     else {
                         delete tFurniture;
                         tFurniture = nullptr;
@@ -69,38 +66,38 @@ void SubjList::menu() {
             break;
         case 2:
             try {
-                subjList->printList(false);
+                rSubjList.printList(false);
             } catch (const std::exception& e) {
                 std::cerr << "Caught an exception: " << e.what() << std::endl;
             }
             break;
         case 3:
-            if (subjList->Size() == 0)
+            if (rSubjList.Size() == 0)
                 std::cout << "List is empty" << std::endl;
             else
-                std::cout << "Items in the list: " << subjList->Size() << std::endl;
+                std::cout << "Items in the list: " << rSubjList.Size() << std::endl;
             break;
         case 4:
             std::cout << "Product code:" << std::endl;
             input<std::string>(productCode);
             try {
-                subjList->printList(productCode);
+                rSubjList.printList(productCode);
             } catch (const std::exception& e) {
                 std::cerr << "Caught an exception: " << e.what() << std::endl;
             }
             break;
         case 5:
-            subjList->sort();
+            rSubjList.sort();
             break;
         case 6:
-            subjList->clear();
+            rSubjList.clear();
             break;
         case 7:
             std::cout << "Position of item, you want to delete:" << std::endl;
             input<int>(k);
             try {
-                tempPart = (Part*)subjList->getItemByNum(k);
-                tempPart->delPart(*subjList);
+                Part& rTempPart = rSubjList[k];
+                rTempPart.delPart();
                 break;
             } catch (const std::exception& e) {
                 std::cerr << "Caught an exception: " << e.what() << std::endl;
@@ -110,8 +107,8 @@ void SubjList::menu() {
             CommandLineUI::printMainMenu();
             break;
         case 9:
-            delete subjList;
-            subjList = nullptr;
+            delete pSubjList;
+            pSubjList = nullptr;
             return;
         default:
             std::cout << "Incorrect input number. Try again." << std::endl;
@@ -168,7 +165,28 @@ Part::Part(int typeNum) : type(typeNum) {
     }
 }
 
-void Part::delPart(SubjList& subjList) {
+bool Part::operator<=( Part& other) {
+    if (this->type == 1 && other.type == 1) {
+        Detail* d1 = static_cast<Detail*>(this);
+        Detail* d2 = static_cast<Detail*>(&other);
+        double dOneSqare = d1->Length() * d1->Width();
+        double dTwoSqare = d2->Length() * d2->Width();
+        if (dOneSqare < dTwoSqare) {
+            return true;
+        }
+    }
+    if (this->type == 2 && other.type == 1)
+        return true;
+    return false;
+}
+
+bool Part::operator==( int type ) {
+    if (this->type != type)
+        return false;
+    return true;
+}
+
+void Part::delPart() {
     Furniture* tFurniture = nullptr;
     Detail* tDetail = nullptr;
     unsigned int id = 0;
@@ -176,13 +194,11 @@ void Part::delPart(SubjList& subjList) {
     {
     case 1:
         id = this->id;
-        subjList.delFById(id);
-        tDetail = static_cast<Detail*>(this);
-        delete tDetail;
+        this->getList()->delFById(id);
+        delete this;
         break;
     case 2:
-        tFurniture = static_cast<Furniture*>(this);
-        delete tFurniture;
+        delete this;
         break;
     default:
         throw Errors::IncorrectPType();
@@ -279,7 +295,8 @@ void SubjList::printList(std::string productCode) const {
         throw Errors::ListUnderflow();
     Item* temp = this->Head();
     while (temp) {
-        if (temp->Type() == 1 && ((Detail*)temp)->ProductCode() == productCode){
+        Item& rTemp = *temp;
+        if (rTemp == 1 && temp->ProductCode() == productCode){
             this->printList(temp->Id());
             std::cout << std::endl;
             return;
@@ -295,7 +312,8 @@ Part* SubjList::searchById(unsigned int id) const {
         throw Errors::ListUnderflow();
     Item* temp = this->Head();
     while (temp) {
-        if (temp->Type() == 1 && temp->Id() == id)
+        Item& rTemp = *temp;
+        if (rTemp == 1 && temp->Id() == id)
             return (Part*)temp;
         temp = temp->Next();
     }
@@ -308,9 +326,10 @@ void SubjList::delFById(unsigned int id) {
     Item* temp = this->Head();
     Item* tempNext = nullptr;
     while (temp) {
+        Item& rTemp = *temp;
         tempNext = temp->Next();
-        if (temp->Type() == 2 && temp->Id() == id) {
-            ((Part*)temp)->delPart(*this);
+        if (rTemp == 2 && temp->Id() == id) {
+            temp->delPart();
         }
         temp = tempNext;
     }
@@ -321,59 +340,44 @@ int SubjList::detailCount() const {
     int count = 0;
     Item* temp = this->Head();
     while (temp) {
-        if (temp->Type() == 1)
+        Item& rTemp = *temp;
+        if (rTemp == 1)
             count++;
         temp = temp->Next();
     }
     return count;
 }
 
-bool SubjList::sortCompare(Item* i1, Item* i2) {
-    Part* p1 = static_cast<Part*>(i1);
-    Part* p2 = static_cast<Part*>(i2);
-    if (p1->type == 1 && p2->type == 1) {
-        Detail* d1 = static_cast<Detail*>(p1);
-        Detail* d2 = static_cast<Detail*>(p2);
-        double dOneSqare = d1->Length() * d1->Width();
-        double dTwoSqare = d2->Length() * d2->Width();
-        if (dOneSqare < dTwoSqare) {
-            return true;
-        }
-    }
-    if (p1->type == 2 && p2->type == 1)
-        return true;
-    return false;
-}
-
 void SubjList::sort() {
+    SubjList& rThis = *this;
     if (!this->Size())
         throw Errors::ListUnderflow();
     Item* item = nullptr;
     for (int i = 0; i < this->Size() - 1; i++) {
         for (int j = 0; j < this->Size() - i - 1; j++) {
-            if (this->sortCompare(this->getItemByNum(j), this->getItemByNum(j + 1))) {
-                item = this->removeItemByNum(j + 1);
-                this->insertIntoList(item, j);
+            if (rThis[j] <= rThis[j + 1]) {
+                item = rThis.removeItemByNum(j + 1);
+                rThis.insertIntoList(item, j);
             }
         }
     }
     item = nullptr;
-    int dc = this->detailCount();
-    if (dc == this->Size())
+    int dc = rThis.detailCount();
+    if (dc == rThis.Size())
         return;
     for (int i = 0; i < dc; i++) {
-        Detail* detail = static_cast<Detail*>(this->getItemByNum(i));
+        Detail* detail = static_cast<Detail*>(&rThis[i]);
         unsigned int id = detail->id;
-        for (int j = dc; j < this->Size(); j++) {
-            Part* part = static_cast<Part*>(this->getItemByNum(j));
+        for (int j = dc; j < rThis.Size(); j++) {
+            Part* part = static_cast<Part*>(&rThis[j]);
             if (part->id == id) {
-                item = this->removeItemByNum(j);
+                item = rThis.removeItemByNum(j);
                 i++;
                 dc++;
-                if (i == this->Size())
-                    this->appendToList(item);
+                if (i == rThis.Size())
+                    rThis.appendToList(item);
                 else
-                    this->insertIntoList(item, i);
+                    rThis.insertIntoList(item, i);
             }
         }
     }
@@ -381,15 +385,15 @@ void SubjList::sort() {
 }
 
 void SubjList::clear() {
-	if (this->Size() == 0) {
+    SubjList& rThis = *this;
+	if (rThis.Size() == 0) {
 		std::cout << "List is already empty" << std::endl;
 		return;
 	}
-	Part* tempPart = (Part*)getItemByNum(0);
 	while(true){
-		tempPart->delPart(*this);
         try {
-            tempPart = (Part*)getItemByNum(0);
+            Item& tempItem = rThis[0];
+		    tempItem.delPart();
         } catch (const std::exception& e) {
             if (e.what() == Errors::ListUnderflow().what()) {
                 std::cout << "List was cleared" << std::endl;

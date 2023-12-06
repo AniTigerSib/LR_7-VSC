@@ -67,16 +67,19 @@ class Item
 	friend class List;
 public:
 	Item() : prev(nullptr), next(nullptr), list(nullptr) {}
-	~Item() { 
+	virtual ~Item() { 
 		if (list)
 			removeItem();
 	}
 
 	Item* Next() const { return next; }
 	Item* Prev() const { return prev; }
+	List* getList() const { return list; }
 	
-	virtual int Type() const = 0;
 	virtual unsigned int Id() const = 0;
+	virtual std::string ProductCode() const = 0;
+	virtual void delPart() = 0;
+	virtual bool operator==( int type ) = 0;
 
 	void removeItem();
 
@@ -91,6 +94,7 @@ protected:
 	int size;
 public:
 	List() : head(nullptr), tail(nullptr), size(0) {}
+	virtual ~List() {}
 
 	void setHead(Item* item) {
 		head = item;
@@ -105,12 +109,12 @@ public:
 	int Size() const { return size; }
 	void SizeDecrement() { size--; }
 
-	virtual bool sortCompare(Item* i1, Item* i2) = 0;
+	virtual void delFById(unsigned int id) = 0;
 	void appendToList(Item* item);
-	// void operator+=(Item* item) {
-	// 	appendToList(item);
-	// }
-	Item* getItemByNum(const int num);
+	void operator+=(Item* item) {
+		appendToList(item);
+	}
+	Item* getItemByNum(const int num) const;
 	void insertIntoList(Item* item, const int num);
 	Item* removeItemByNum(const int num);
 };

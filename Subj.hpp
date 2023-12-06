@@ -88,16 +88,15 @@ protected:
     Part(int typeNum);
     void setId(unsigned int id) { this->id = id; }
 public:
-    ~Part() {}
-
     virtual bool setData(SubjList& subjList);
     virtual bool setData() { return false; }
 
     Item* toItem() { return static_cast<Item*>(this); }
+    bool operator<=( Part& other);
+    bool operator==( int type ) override;
 
-    int Type() const override { return type; }
     unsigned int Id() const override { return id; }
-    void delPart(SubjList& subjList);
+    void delPart() override;
 
     virtual void print() const;
     void print(bool partsOnly, int& i) const override;
@@ -111,18 +110,23 @@ class SubjList : public List
 {
 public:
     SubjList() {}
-    ~SubjList() {
+    ~SubjList() override {
         clear();
     }
 
     static void menu();
+
 	void printList(bool partsOnly) const;
     void printList(unsigned int id) const;
     void printList(std::string productCode) const;
     Part* searchById(unsigned int id) const;
-    void delFById(unsigned int id);
     int detailCount() const;
-    bool sortCompare(Item* i1, Item* i2) override;
+
+    Part& operator[](int index) const {
+        return *(Part*)getItemByNum(index);
+    }
+
+    void delFById(unsigned int id) override;
     void sort();
     void clear();
 };
@@ -139,16 +143,15 @@ class Detail : public Part
     std::string productCode;
 public:
     Detail() : Part(1) {}
-    ~Detail() {}
+    ~Detail() override {}
 
-    bool setData(SubjList& subjList) override { return false; }
     bool setData() override;
     void getUserMaterial();
     void getUserDParams(bool isLength);
     void getUserProductCode();
 
     Part* toPart() { return (Part*)this; }
-    std::string ProductCode() const { return productCode; }
+    std::string ProductCode() const override { return productCode; }
     double Length() const { return length; }
     double Width() const { return width; }
     
@@ -160,10 +163,10 @@ class Furniture : public Part
     unsigned int count;
 public:
     Furniture() : Part(2) {}
-    ~Furniture() {}
+    ~Furniture() override {}
 
     bool setData(SubjList& subjList) override;
-    bool setData() override { return false; }
+    std::string ProductCode() const override { return 0; };
     
     unsigned int getUserId(SubjList& subjList);
     void getUserCount();

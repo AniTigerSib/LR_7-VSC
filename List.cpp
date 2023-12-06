@@ -39,7 +39,7 @@ void List::appendToList(Item* item) {
 	return;
 }
 
-Item* List::getItemByNum(const int num) {
+Item* List::getItemByNum(const int num) const {
     if (!size)
 		throw Errors::ListUnderflow();
 	if (num < 0)
